@@ -126,54 +126,55 @@ def main():
         effort_limits[indicies] = group.effort_limit
 
     # extract the indices of the actuated joints
-    match_expr_list = {expr: None for expr in env_cfg.actions.joint_pos.joint_names}
-    action_indices, _, _ = string_utils.resolve_matching_names_values(match_expr_list, joint_names, preserve_order=True)
+    if hasattr(env_cfg.actions, "joint_pos"):
+        match_expr_list = {expr: None for expr in env_cfg.actions.joint_pos.joint_names}
+        action_indices, _, _ = string_utils.resolve_matching_names_values(match_expr_list, joint_names, preserve_order=True)
 
-    deploy_config = {
-        # === Policy configurations ===
-        "policy_checkpoint_path": f"{export_model_dir}/policy.onnx",
+        deploy_config = {
+            # === Policy configurations ===
+            "policy_checkpoint_path": f"{export_model_dir}/policy.onnx",
 
-        # === Networking configurations ===
-        "ip_robot_addr": "127.0.0.1",
-        "ip_policy_obs_port": 10000,
-        "ip_host_addr": "127.0.0.1",
-        "ip_policy_acs_port": 10001,
+            # === Networking configurations ===
+            "ip_robot_addr": "127.0.0.1",
+            "ip_policy_obs_port": 10000,
+            "ip_host_addr": "127.0.0.1",
+            "ip_policy_acs_port": 10001,
 
-        # === Physics configurations ===
-        "control_dt": 0.004,   # 250 Hz
-        "policy_dt": env_cfg.sim.dt * env_cfg.decimation,      # 25 Hz
-        "physics_dt": 0.0005,    # 2000 Hz
-        "cutoff_freq": 1000,
+            # === Physics configurations ===
+            "control_dt": 0.004,   # 250 Hz
+            "policy_dt": env_cfg.sim.dt * env_cfg.decimation,      # 25 Hz
+            "physics_dt": 0.0005,    # 2000 Hz
+            "cutoff_freq": 1000,
 
-        # === Articulation configurations ===
-        "num_joints": num_joints,
-        "joints": joint_names,
-        "joint_kp": joint_kp.tolist(),
-        "joint_kd": joint_kd.tolist(),
-        "effort_limits": effort_limits.tolist(),
-        "default_base_position": env_cfg.scene.robot.init_state.pos,
-        "default_joint_positions": init_joint_pos,
+            # === Articulation configurations ===
+            "num_joints": num_joints,
+            "joints": joint_names,
+            "joint_kp": joint_kp.tolist(),
+            "joint_kd": joint_kd.tolist(),
+            "effort_limits": effort_limits.tolist(),
+            "default_base_position": env_cfg.scene.robot.init_state.pos,
+            "default_joint_positions": init_joint_pos,
 
-        # === Observation configurations ===
-        "num_observations": env.observation_space["policy"].shape[-1],
-        "history_length": env_cfg.observations.policy.actions.history_length,
+            # === Observation configurations ===
+            "num_observations": env.observation_space["policy"].shape[-1],
+            "history_length": env_cfg.observations.policy.actions.history_length,
 
-        # === Command configurations ===
-        # sample a command
-        "command_velocity": env_cfg.observations.policy.velocity_commands.func(
-            env.unwrapped, env_cfg.observations.policy.velocity_commands.params["command_name"]
-            )[0].tolist(),
+            # === Command configurations ===
+            # sample a command
+            "command_velocity": env_cfg.observations.policy.velocity_commands.func(
+                env.unwrapped, env_cfg.observations.policy.velocity_commands.params["command_name"]
+                )[0].tolist(),
 
-        # === Action configurations ===
-        "num_actions": env.action_space.shape[-1],
-        "action_scale": env_cfg.actions.joint_pos.scale,
-        "action_indices": action_indices,
-        "action_limit_lower": -10000,
-        "action_limit_upper": 10000,
-    }
-    if not os.path.exists("configs"):
-        os.makedirs("configs")
-    OmegaConf.save(deploy_config, "configs/policy_latest.yaml")
+            # === Action configurations ===
+            "num_actions": env.action_space.shape[-1],
+            "action_scale": env_cfg.actions.joint_pos.scale,
+            "action_indices": action_indices,
+            "action_limit_lower": -10000,
+            "action_limit_upper": 10000,
+        }
+        if not os.path.exists("configs"):
+            os.makedirs("configs")
+        OmegaConf.save(deploy_config, "configs/policy_latest.yaml")
 
     # reset environment
     obs, _ = env.get_observations()

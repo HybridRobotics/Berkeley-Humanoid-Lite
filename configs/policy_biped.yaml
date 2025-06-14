@@ -3,24 +3,88 @@
 policy_checkpoint_path: "checkpoints/policy_biped.onnx"
 
 # === Networking configurations ===
-ip_robot_addr: "127.0.0.1"
+ip_robot_addr: 127.0.0.1
 ip_policy_obs_port: 10000
-ip_host_addr: "127.0.0.1"
+ip_host_addr: 127.0.0.1
 ip_policy_acs_port: 10001
 
 # === Physics configurations ===
-control_dt: 0.004   # 250 Hz
-policy_dt: 0.04      # 25 Hz
-physics_dt: 0.001    # 1000 Hz
-cutoff_freq: 200.0
+control_dt: 0.004
+policy_dt: 0.04
+physics_dt: 0.001
+cutoff_freq: 1000
 
 # === Articulation configurations ===
 num_joints: 12
-joint_kp: 20
-joint_kd: 2
-effort_limits: 7.5
-default_base_position: [0.0, 0.0, 0.0]
-default_joint_positions: [0.0, 0.0, -0.2, 0.4, -0.3, 0.0, 0.0, 0.0, -0.2, 0.4, -0.3, 0.0]
+joints:
+- leg_left_hip_roll_joint
+- leg_left_hip_yaw_joint
+- leg_left_hip_pitch_joint
+- leg_left_knee_pitch_joint
+- leg_left_ankle_pitch_joint
+- leg_left_ankle_roll_joint
+- leg_right_hip_roll_joint
+- leg_right_hip_yaw_joint
+- leg_right_hip_pitch_joint
+- leg_right_knee_pitch_joint
+- leg_right_ankle_pitch_joint
+- leg_right_ankle_roll_joint
+joint_kp:
+- 20.0
+- 20.0
+- 20.0
+- 20.0
+- 20.0
+- 20.0
+- 20.0
+- 20.0
+- 20.0
+- 20.0
+- 20.0
+- 20.0
+joint_kd:
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+effort_limits:
+- 6.0
+- 6.0
+- 6.0
+- 6.0
+- 6.0
+- 6.0
+- 6.0
+- 6.0
+- 6.0
+- 6.0
+- 6.0
+- 6.0
+default_base_position:
+- 0.0
+- 0.0
+- 0.0
+default_joint_positions:
+- 0.0
+- 0.0
+- -0.2
+- 0.4
+- -0.3
+- 0.0
+- 0.0
+- 0.0
+- -0.2
+- 0.4
+- -0.3
+- 0.0
 
 # === Observation configurations ===
 num_observations: 45
@@ -31,6 +95,7 @@ command_velocity: [0.0, 0.0, 0.0]
 
 # === Action configurations ===
 num_actions: 12
+action_scale: 0.25
 action_indices:
 - 0
 - 1
@@ -44,6 +109,5 @@ action_indices:
 - 9
 - 10
 - 11
-action_scale: 0.25
-action_limit_lower: -200
-action_limit_upper: 200
+action_limit_lower: -10000
+action_limit_upper: 10000

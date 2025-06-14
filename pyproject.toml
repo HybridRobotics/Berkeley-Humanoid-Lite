@@ -1,3 +1,26 @@
+[project]
+name = "berkeley-humanoid-lite-workspace"
+version = "0.1.0"
+description = "Workspace for Berkeley Humanoid Lite"
+readme = "README.md"
+requires-python = ">=3.10,<3.11"
+dependencies = [
+  "torch==2.5.1",
+  "torchvision==0.20.1",
+  "isaacsim[all,extscache]==4.5.0",
+  "isaaclab[isaacsim,all]==2.1.0",
+  "numpy",
+  "omegaconf",
+  "mujoco",
+  "onnxruntime",
+  "cc.udp",
+  "inputs",
+  "pyaml",
+  "berkeley_humanoid_lite",
+  "berkeley_humanoid_lite_assets",
+  "berkeley_humanoid_lite_lowlevel",
+]
+
 [build-system]
 requires = ["setuptools", "toml"]
 build-backend = "setuptools.build_meta"
@@ -83,3 +106,37 @@ reportMissingModuleSource = "none" # -> most common: prettytable in mdp managers
 reportGeneralTypeIssues = "none"       # -> raises 218 errors (usage of literal MISSING in dataclasses)
 reportOptionalMemberAccess = "warning" # -> raises 8 errors
 reportPrivateUsage = "warning"
+
+[tool.setuptools]
+
+package-dir = {"" = "source"}
+
+[tool.uv.sources]
+
+torch = { index = "pytorch" }
+torchvision = { index = "pytorch" }
+isaacsim = { index = "nvidia" }
+isaaclab = { index = "nvidia" }
+berkeley_humanoid_lite = { workspace = true }
+berkeley_humanoid_lite_assets = { workspace = true }
+berkeley_humanoid_lite_lowlevel = { workspace = true }
+
+[tool.uv.workspace]
+
+members = [
+    "source/berkeley_humanoid_lite",
+    "source/berkeley_humanoid_lite_assets",
+    "source/berkeley_humanoid_lite_lowlevel",
+]
+
+[[tool.uv.index]]
+
+name = "pytorch"
+url = "https://download.pytorch.org/whl/cu121"
+explicit = true
+
+[[tool.uv.index]]
+
+name = "nvidia"
+url = "https://pypi.nvidia.com"
+explicit = true

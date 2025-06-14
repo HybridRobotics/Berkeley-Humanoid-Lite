@@ -12,38 +12,14 @@ import mujoco.viewer
 from cc.udp import UDP
 
 from berkeley_humanoid_lite_lowlevel.policy.policy_runner import parse_arguments, PolicyRunner
-from berkeley_humanoid_lite_lowlevel.policy.udp_joystick import UdpJoystick
-
-class Ema:
-    """Exponential Moving Average filter implementation.
-
-    Args:
-        cutoff_freq (float): Cutoff frequency in Hz
-        dt (float): Time step in seconds
-        init_value (torch.Tensor): Initial value for the filter
-    """
-    def __init__(self, cutoff_freq: float, dt: float, init_value: torch.Tensor):
-        self.alpha = dt / (dt + 1 / (2 * np.pi * cutoff_freq))
-        self.value = init_value
-
-    def filter(self, x: torch.Tensor) -> torch.Tensor:
-        """Apply EMA filtering to input value.
-
-        Args:
-            x (torch.Tensor): Input value to filter
-
-        Returns:
-            torch.Tensor: Filtered value
-        """
-        self.value = self.alpha * x + (1 - self.alpha) * self.value
-        return self.value
+from berkeley_humanoid_lite_lowlevel.policy.gamepad import Se2Gamepad
 
 
 # Load configuration
 cfg = parse_arguments()
 
 if not cfg:
-    raise ValueError(f"Failed to load config.")
+    raise ValueError("Failed to load config.")
 
 
 def quat_rotate_inverse(q: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
@@ -84,7 +60,7 @@ class Cfg:
     effort_limits = cfg.effort_limits  # Joint torque limits
 
 
-class MujocoEnv:
+class MujocoSimulator:
     """MuJoCo simulation environment for the Berkeley Humanoid Lite robot.
 
     This class handles the physics simulation, state observation, and control
@@ -134,37 +110,8 @@ class MujocoEnv:
         self.command_velocity_yaw = 0.0
 
         # Start joystick thread
-        self.joystick_thread = threading.Thread(target=self.joystick_receive_thread, daemon=True)
-        self.joystick_thread.start()
-
-        # Initialize EMA filter
-        self.ema_filter = Ema(cutoff_freq=self.cfg.cutoff_freq, dt=self.cfg.physics_dt,
-                             init_value=torch.zeros((self.cfg.num_joints,)))
-
-    def joystick_receive_thread(self):
-        """UDP server thread that receives joystick commands.
-
-        Listens for UDP broadcasts containing control mode and velocity commands.
-        Updates the robot's command state based on received joystick input.
-        """
-        # Create UDP socket
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        server_address = ("0.0.0.0", 10011)
-        sock.bind(server_address)
-
-        print(f"Listening for UDP broadcast messages on port {server_address[1]}")
-
-        while not self.is_killed.is_set():
-            data, _ = sock.recvfrom(1024)
-            command_mode_switch, command_velocity_x, command_velocity_y, command_velocity_yaw = struct.unpack("<Bfff", data)
-
-            if command_mode_switch != 0:
-                self.mode = command_mode_switch
-            self.command_velocity_x = command_velocity_x
-            self.command_velocity_y = command_velocity_y * 0.5
-            self.command_velocity_yaw = command_velocity_yaw
-
-        sock.close()
+        self.command_controller = Se2Gamepad()
+        self.command_controller.run()
 
     def reset(self) -> torch.Tensor:
         """Reset the simulation environment to initial state.
@@ -219,11 +166,10 @@ class MujocoEnv:
 
         # PD control
         output_torques = self.joint_kp * (target_positions - self._get_joint_pos()) + \
-                        self.joint_kd * (-self._get_joint_vel())
+            self.joint_kd * (-self._get_joint_vel())
 
         # Apply EMA filtering and torque limits
-        output_torques_filtered = self.ema_filter.filter(output_torques)
-        output_torques_clipped = torch.clip(output_torques_filtered, -self.effort_limits, self.effort_limits)
+        output_torques_clipped = torch.clip(output_torques, -self.effort_limits, self.effort_limits)
 
         self.mj_data.ctrl[:] = output_torques_clipped.numpy()
 
@@ -287,6 +233,17 @@ class MujocoEnv:
             torch.Tensor: Concatenated observation vector containing base orientation,
                          angular velocity, joint positions, velocities, and command state
         """
+        command_mode_switch = self.command_controller.commands["mode_switch"]
+        command_velocity_x = self.command_controller.commands["velocity_x"]
+        command_velocity_y = self.command_controller.commands["velocity_y"]
+        command_velocity_yaw = self.command_controller.commands["velocity_yaw"]
+
+        if command_mode_switch != 0:
+            self.mode = command_mode_switch
+        self.command_velocity_x = command_velocity_x
+        self.command_velocity_y = command_velocity_y * 0.5
+        self.command_velocity_yaw = command_velocity_yaw
+
         return torch.cat([
             self._get_base_quat(),
             self._get_base_ang_vel(),
@@ -301,8 +258,8 @@ class MujocoEnv:
 def main():
     """Main execution function for the MuJoCo simulation environment."""
     # Initialize environment
-    env = MujocoEnv(Cfg())
-    obs = env.reset()
+    robot = MujocoSimulator(Cfg())
+    obs = robot.reset()
 
     # Setup UDP communication
     udp = UDP((cfg.ip_robot_addr, cfg.ip_policy_acs_port),
@@ -313,13 +270,8 @@ def main():
     runner_thread = threading.Thread(target=runner.run, daemon=True)
     runner_thread.start()
 
-    # Initialize and start joystick interface
-    stick = UdpJoystick(publish_address="127.0.0.1", publish_port=10011)
-    stick_thread = threading.Thread(target=stick.run, daemon=True)
-    stick_thread.start()
-
     # Default actions for fallback
-    default_actions = np.array(cfg.default_joint_positions, dtype=np.float32)[env.cfg.action_indices]
+    default_actions = np.array(cfg.default_joint_positions, dtype=np.float32)[robot.cfg.action_indices]
 
     # Main control loop
     while True:
@@ -333,7 +285,7 @@ def main():
 
         # Execute step
         actions = torch.tensor(actions)
-        obs = env.step(actions)
+        obs = robot.step(actions)
 
 
 if __name__ == "__main__":

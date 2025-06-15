@@ -3,8 +3,6 @@
 
 import numpy as np
 import torch
-import mujoco.viewer
-from cc.udp import UDP
 
 from berkeley_humanoid_lite_lowlevel.policy.rl_controller import RlController
 from berkeley_humanoid_lite.environments import MujocoSimulator, Cfg
@@ -23,10 +21,6 @@ def main():
     # Initialize environment
     robot = MujocoSimulator(cfg)
     obs = robot.reset()
-
-    # Setup UDP communication
-    udp = UDP((cfg.ip_robot_addr, cfg.ip_policy_acs_port),
-              (cfg.ip_host_addr, cfg.ip_policy_obs_port))
 
     # Initialize and start policy controller
     controller = RlController(cfg)

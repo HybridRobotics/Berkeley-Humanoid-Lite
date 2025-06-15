@@ -2,17 +2,38 @@
 
 import time
 import threading
-import socket
-import struct
+import argparse
+from typing import Union
 
 import numpy as np
 import torch
 import mujoco
 import mujoco.viewer
 from cc.udp import UDP
+from omegaconf import DictConfig, ListConfig, OmegaConf
 
-from berkeley_humanoid_lite_lowlevel.policy.policy_runner import parse_arguments, PolicyRunner
+from berkeley_humanoid_lite_lowlevel.policy.rl_controller import RlController
 from berkeley_humanoid_lite_lowlevel.policy.gamepad import Se2Gamepad
+
+
+def parse_arguments() -> Union[DictConfig, ListConfig]:
+    """
+    Parse command line arguments and load configuration file.
+
+    Returns:
+        Union[DictConfig, ListConfig]: Loaded configuration object
+    """
+    parser = argparse.ArgumentParser(description="Policy Runner for Berkeley Humanoid Lite")
+    parser.add_argument("--config", type=str, default="./configs/policy_humanoid.yaml",
+                       help="Path to the configuration file")
+    args = parser.parse_args()
+
+    print("Loading config file from ", args.config)
+
+    with open(args.config, "r") as f:
+        cfg = OmegaConf.load(f)
+
+    return cfg
 
 
 # Load configuration
@@ -265,10 +286,9 @@ def main():
     udp = UDP((cfg.ip_robot_addr, cfg.ip_policy_acs_port),
               (cfg.ip_host_addr, cfg.ip_policy_obs_port))
 
-    # Initialize and start policy runner
-    runner = PolicyRunner(cfg)
-    runner_thread = threading.Thread(target=runner.run, daemon=True)
-    runner_thread.start()
+    # Initialize and start policy controller
+    controller = RlController(cfg)
+    controller.load_policy()
 
     # Default actions for fallback
     default_actions = np.array(cfg.default_joint_positions, dtype=np.float32)[robot.cfg.action_indices]
@@ -276,8 +296,7 @@ def main():
     # Main control loop
     while True:
         # Send observations and receive actions
-        udp.send_numpy(obs.numpy())
-        actions = udp.recv_numpy(dtype=np.float32, timeout=0.2)
+        actions = controller.update(obs.numpy())
 
         # Use default actions if no actions received
         if actions is None:

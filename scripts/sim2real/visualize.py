@@ -1,28 +1,12 @@
 # Copyright (c) 2025, The Berkeley Humanoid Lite Project Developers.
 
+import threading
+
 import numpy as np
 import torch
 import mujoco
 import mujoco.viewer
 from cc.udp import UDP
-
-
-def quat_rotate_inverse(q: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
-    """Rotate a vector by the inverse of a quaternion.
-
-    Args:
-        q (torch.Tensor): Quaternion [w, x, y, z]
-        v (torch.Tensor): Vector to rotate
-
-    Returns:
-        torch.Tensor: Rotated vector
-    """
-    q_w = q[0]
-    q_vec = q[1:4]
-    a = v * (2.0 * q_w ** 2 - 1.0)
-    b = torch.cross(q_vec, v, dim=-1) * q_w * 2.0
-    c = q_vec * (torch.dot(q_vec, v)) * 2.0
-    return a - b + c
 
 
 class MujocoVisualizer:
@@ -70,13 +54,14 @@ class MujocoVisualizer:
         robot_mode = robot_observations[7 + self.num_dofs * 2]
         command_velocity = robot_observations[7 + self.num_dofs * 2 + 1:7 + self.num_dofs * 2 + 4]
 
+        self.mj_data.qpos[0:3] = np.array([0.0, 0.0, 0.0])
         self.mj_data.qpos[3:7] = robot_base_quat
+        self.mj_data.qvel[0:3] = np.array([0.0, 0.0, 0.0])
         self.mj_data.qvel[3:6] = robot_base_ang_vel
         self.mj_data.qpos[7:] = robot_joint_pos
         self.mj_data.qvel[6:] = robot_joint_vel
 
-        print(robot_mode, command_velocity)
-
+        mujoco.mj_step(self.mj_model, self.mj_data)
         self.mj_viewer.sync()
 
 
@@ -85,10 +70,21 @@ if __name__ == "__main__":
     # Initialize environment
     visualizer = MujocoVisualizer()
 
-    # Setup UDP communication
-    udp = UDP(("0.0.0.0", 11000),
-              ("127.0.0.1", 11000))
+    def receive_udp_data(robot_observation_buffer):
+        # Setup UDP communication
+        udp = UDP(("0.0.0.0", 11000), ("127.0.0.1", 11000))
+
+        """Thread function to receive UDP data."""
+        while True:
+            robot_observations = udp.recv_numpy(dtype=np.float32)
+            if robot_observations is not None:
+                robot_observation_buffer[:] = robot_observations
+
+    robot_observation_buffer = np.zeros((35,), dtype=np.float32)
+
+    udp_receive_thread = threading.Thread(target=receive_udp_data, args=(robot_observation_buffer,))
+    udp_receive_thread.daemon = True
+    udp_receive_thread.start()
 
     while True:
-        robot_observations = udp.recv_numpy(dtype=np.float32)
-        visualizer.step(robot_observations)
+        visualizer.step(robot_observation_buffer)

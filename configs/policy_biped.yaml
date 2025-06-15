@@ -11,7 +11,7 @@ ip_policy_acs_port: 10001
 # === Physics configurations ===
 control_dt: 0.004
 policy_dt: 0.04
-physics_dt: 0.001
+physics_dt: 0.00025
 cutoff_freq: 1000
 
 # === Articulation configurations ===

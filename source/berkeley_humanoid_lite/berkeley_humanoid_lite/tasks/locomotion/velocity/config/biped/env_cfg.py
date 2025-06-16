@@ -249,7 +249,6 @@ class EventCfg:
             "operation": "add",
         },
     )
-
     scale_all_actuator_torque_constant = EventTerm(
         func=mdp.randomize_actuator_gains,
         mode="startup",
@@ -271,7 +270,6 @@ class EventCfg:
             "torque_range": (-2.0, 2.0),
         },
     )
-
     reset_base = EventTerm(
         func=mdp.reset_root_state_uniform,
         mode="reset",
@@ -287,7 +285,6 @@ class EventCfg:
             },
         },
     )
-
     reset_robot_joints = EventTerm(
         func=mdp.reset_joints_by_scale,
         mode="reset",

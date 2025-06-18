@@ -127,12 +127,12 @@ class RewardsCfg:
     # joint efforts
     dof_torques_l2 = RewTerm(
         func=mdp.joint_torques_l2,
-        weight=-1.0e-3,
+        weight=-2.0e-3,
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=HUMANOID_LITE_LEG_JOINTS)},
     )
     dof_acc_l2 = RewTerm(
         func=mdp.joint_acc_l2,
-        weight=-1.0e-7,
+        weight=-1.0e-6,
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=HUMANOID_LITE_LEG_JOINTS)},
     )
     dof_pos_limits = RewTerm(
@@ -141,7 +141,7 @@ class RewardsCfg:
     )
     action_rate_l2 = RewTerm(
         func=mdp.action_rate_l2,
-        weight=-0.01,
+        weight=-0.02,
     )
 
     # === Reward for task-space performance ===
@@ -189,14 +189,14 @@ class RewardsCfg:
     # penalize deviation from default of the joints that are not essential for locomotion
     joint_deviation_hip = RewTerm(
         func=mdp.joint_deviation_l1,
-        weight=-1.0,
+        weight=-0.2,
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_hip_yaw_joint", ".*_hip_roll_joint"])},
     )
 
     # Penalize deviation of ankle roll joints
     joint_deviation_ankle_roll = RewTerm(
         func=mdp.joint_deviation_l1,
-        weight=-1.0,
+        weight=-0.2,
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_ankle_roll_joint"])},
     )
 
@@ -326,7 +326,7 @@ class BerkeleyHumanoidLiteBipedEnvCfg(LocomotionVelocityEnvCfg):
 
         # Physics settings
         # 25 Hz override
-        self.decimation = 8
+        self.decimation = 4
         self.episode_length_s = 20.0
         # simulation settings
         self.sim.dt = 0.005

@@ -181,7 +181,7 @@ if __name__ == "__main__":
     controller_thread = threading.Thread(target=controller_update, daemon=True)
     controller_thread.start()
 
-    robot.run(kp=40, kd=2, torque_limit=2)
+    robot.run(kp=30, kd=4, torque_limit=2)
 
     arm_actions = np.zeros((10,), dtype=np.float32)
 

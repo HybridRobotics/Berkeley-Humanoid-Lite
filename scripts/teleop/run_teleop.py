@@ -12,6 +12,9 @@ from pink.tasks import FrameTask
 from pink.visualization import start_meshcat_visualizer
 import meshcat_shapes
 from cc.udp import UDP
+from loop_rate_limiters import RateLimiter
+
+from berkeley_humanoid_lite_lowlevel.robot.bimanual import Bimanual
 
 
 np.set_printoptions(precision=2)
@@ -91,20 +94,20 @@ class DualArmViveAgent():
         self.button_data = (bridge_data["left"]["button_pressed"], bridge_data["right"]["button_pressed"])
         self.trigger_data = (bridge_data["left"]["trigger"], bridge_data["right"]["trigger"])
 
-    def update(self, obs: Dict[str, np.ndarray]) -> np.ndarray:
+    def update(self, obs: np.ndarray) -> np.ndarray:
         vive_poses = [pin.SE3(quat=pin.Quaternion(R=self.pose_data[i][0:3, 0:3]), translation=self.pose_data[i][0:3, -1]) for i in range(self.num_end_effectors)]
 
         button_data = self.button_data
         trigger_data = self.trigger_data
 
-        assert obs['qpos'].shape == (self.robot.model.nq,)
+        assert obs.shape == (self.robot.model.nq,)
         # assert len(pose_data) == self.num_ee
         # assert len(button_data) == self.num_ee
         # assert len(trigger_data) == self.num_ee
 
         data = self.robot.data.copy()
         # Update pinocchio data
-        q = obs['qpos'].copy()
+        q = obs.copy()
         q[3:7] = q[[4, 5, 6, 3]]  # spwan the quaternion from wxyz to xyzw
         pin.forwardKinematics(self.robot.model, data, q)
         pin.framesForwardKinematics(self.robot.model, data, q)
@@ -159,14 +162,15 @@ class DualArmViveAgent():
 if __name__ == "__main__":
     agent = DualArmViveAgent()
 
-    # udp = UDP(recv_addr=("172.28.0.101", 10101), send_addr=("172.28.0.2", 10100))
-    udp = UDP(recv_addr=("127.0.0.1", 10101), send_addr=("127.0.0.1", 10100))
+    rate = RateLimiter(30)
+
+    robot = Bimanual()
 
     bridge_udp = UDP(recv_addr=("0.0.0.0", 11005), send_addr=("127.0.0.1", 11005))
 
-    obs = {'qpos': np.zeros(agent.robot.model.nq)}
-    obs['qpos'][0:3] = [0, 0, 0.5]
-    obs['qpos'][3:7] = [1, 0, 0, 0]
+    obs = np.zeros(agent.robot.model.nq)
+    obs[0:3] = [0, 0, 0.5]
+    obs[3:7] = [1, 0, 0, 0]
 
     def controller_update():
         while True:
@@ -177,17 +181,16 @@ if __name__ == "__main__":
     controller_thread = threading.Thread(target=controller_update, daemon=True)
     controller_thread.start()
 
+    robot.run(kp=40, kd=2, torque_limit=2)
+
+    arm_actions = np.zeros((10,), dtype=np.float32)
+
     while True:
-        # position received from robot
-        # udp_data = udp.recv_numpy(dtype=np.float32, timeout=0.1)
-        udp_data = np.zeros(10, dtype=np.float32)
+        # perform joint axis direction transform
+        robot_obs = robot.step(arm_actions * robot.joint_axis_directions) * robot.joint_axis_directions
 
-        # if udp_data is None:
-        #     print("No data received")
-        #     agent.first_run = True
-        #     continue
-
-        obs["qpos"][7:17] = udp_data
+        obs[7:17] = robot_obs[0:10]
         arm_actions, trigger_value = agent.update(obs)
-        udp_data_send = np.concatenate([arm_actions.astype(np.float32), np.array(trigger_value, dtype=np.float32)])
-        udp.send_numpy(udp_data_send)
+        print(arm_actions)
+
+        rate.sleep()

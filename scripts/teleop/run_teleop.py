@@ -20,7 +20,7 @@ from berkeley_humanoid_lite_lowlevel.robot.bimanual import Bimanual
 np.set_printoptions(precision=2)
 
 
-class DualArmViveAgent():
+class TeleopIkSolver():
     def __init__(
         self,
         urdf_path: str = "./source/berkeley_humanoid_lite_assets/data/urdf/berkeley_humanoid_lite.urdf"
@@ -160,7 +160,7 @@ class DualArmViveAgent():
 
 
 if __name__ == "__main__":
-    agent = DualArmViveAgent()
+    solver = TeleopIkSolver()
 
     rate = RateLimiter(30)
 
@@ -168,7 +168,7 @@ if __name__ == "__main__":
 
     bridge_udp = UDP(recv_addr=("0.0.0.0", 11005), send_addr=("127.0.0.1", 11005))
 
-    obs = np.zeros(agent.robot.model.nq)
+    obs = np.zeros(solver.robot.model.nq)
     obs[0:3] = [0, 0, 0.5]
     obs[3:7] = [1, 0, 0, 0]
 
@@ -176,21 +176,29 @@ if __name__ == "__main__":
         while True:
             bridge_data = bridge_udp.recv_dict()
             if bridge_data is not None:
-                agent.update_controller(bridge_data)
+                solver.update_controller(bridge_data)
 
     controller_thread = threading.Thread(target=controller_update, daemon=True)
     controller_thread.start()
 
-    robot.run(kp=30, kd=4, torque_limit=2)
+    robot.start(kp=30, kd=2, torque_limit=2)
 
-    arm_actions = np.zeros((10,), dtype=np.float32)
+    robot_actions = np.zeros((12,), dtype=np.float32)
 
-    while True:
-        # perform joint axis direction transform
-        robot_obs = robot.step(arm_actions * robot.joint_axis_directions) * robot.joint_axis_directions
+    try:
+        while True:
+            # perform joint axis direction transform
+            robot_obs = robot.step(robot_actions * robot.joint_axis_directions) * robot.joint_axis_directions
 
-        obs[7:17] = robot_obs[0:10]
-        arm_actions, trigger_value = agent.update(obs)
-        print(arm_actions)
+            obs[7:17] = robot_obs[0:10]
+            joint_actions, gripper_actions = solver.update(obs)
+            print(joint_actions, gripper_actions)
+            robot_actions[0:10] = joint_actions
+            robot_actions[10] = gripper_actions[0]
+            robot_actions[11] = gripper_actions[1]
 
-        rate.sleep()
+            rate.sleep()
+    except KeyboardInterrupt:
+        robot.stop()
+
+    print("Stopped.")

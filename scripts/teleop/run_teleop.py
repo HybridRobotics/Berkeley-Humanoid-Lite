@@ -94,16 +94,13 @@ class TeleopIkSolver():
         self.button_data = (bridge_data["left"]["button_pressed"], bridge_data["right"]["button_pressed"])
         self.trigger_data = (bridge_data["left"]["trigger"], bridge_data["right"]["trigger"])
 
-    def update(self, obs: np.ndarray) -> np.ndarray:
+    def update(self, obs: np.ndarray) -> tuple[np.ndarray, tuple[float, float]]:
         vive_poses = [pin.SE3(quat=pin.Quaternion(R=self.pose_data[i][0:3, 0:3]), translation=self.pose_data[i][0:3, -1]) for i in range(self.num_end_effectors)]
 
         button_data = self.button_data
         trigger_data = self.trigger_data
 
         assert obs.shape == (self.robot.model.nq,)
-        # assert len(pose_data) == self.num_ee
-        # assert len(button_data) == self.num_ee
-        # assert len(trigger_data) == self.num_ee
 
         data = self.robot.data.copy()
         # Update pinocchio data
@@ -149,6 +146,7 @@ class TeleopIkSolver():
 
         for i in range(self.num_end_effectors):
             self.end_effector_tasks[i].transform_target_to_world = desired_poses[i]
+
         self.base_tasks[0].transform_target_to_world = pin.SE3(pin.Quaternion.Identity(), np.array([0.0, 0.0, 0.5]))
         tasks = self.end_effector_tasks + self.base_tasks
 

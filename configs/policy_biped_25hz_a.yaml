@@ -1,6 +1,6 @@
 
 # === Policy configurations ===
-policy_checkpoint_path: "checkpoints/policy_biped.onnx"
+policy_checkpoint_path: "checkpoints/policy_biped_25hz_a.onnx"
 
 # === Networking configurations ===
 ip_robot_addr: 127.0.0.1

@@ -77,9 +77,9 @@ class CommandsCfg:
         heading_control_stiffness=0.5,
         debug_vis=True,
         ranges=mdp.UniformVelocityCommandCfg.Ranges(
-            lin_vel_x=(-1.0, 1.0),
-            lin_vel_y=(-0.5, 0.5),
-            ang_vel_z=(-1.5, 1.5),
+            lin_vel_x=(-0.5, 0.5),
+            lin_vel_y=(-0.25, 0.25),
+            ang_vel_z=(-1.0, 1.0),
             heading=(-math.pi, math.pi),
         ),
     )
@@ -141,7 +141,7 @@ class RewardsCfg:
     )
     action_rate_l2 = RewTerm(
         func=mdp.action_rate_l2,
-        weight=-0.02,
+        weight=-0.01,
     )
 
     # === Reward for task-space performance ===
@@ -149,12 +149,12 @@ class RewardsCfg:
     track_lin_vel_xy_exp = RewTerm(
         func=mdp.track_lin_vel_xy_yaw_frame_exp,
         weight=2.0,
-        params={"command_name": "base_velocity", "std": 0.5},
+        params={"command_name": "base_velocity", "std": 0.25},
     )
     track_ang_vel_z_exp = RewTerm(
         func=mdp.track_ang_vel_z_world_exp,
         weight=1.0,
-        params={"command_name": "base_velocity", "std": 0.5},
+        params={"command_name": "base_velocity", "std": 0.25},
     )
 
     undesired_contacts = RewTerm(
@@ -169,11 +169,11 @@ class RewardsCfg:
     # encourage robot to take steps
     feet_air_time = RewTerm(
         func=mdp.feet_air_time_positive_biped,
-        weight=2.0,
+        weight=1.0,
         params={
             "command_name": "base_velocity",
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_ankle_roll"),
-            "threshold": 0.5,
+            "threshold": 0.4,
         },
     )
     # penalize feet sliding on the ground to exploit physics sim inaccuracies
@@ -268,6 +268,8 @@ class EventCfg:
             "asset_cfg": SceneEntityCfg("robot", body_names="base"),
             "force_range": (-2.0, 2.0),
             "torque_range": (-2.0, 2.0),
+            # "force_range": (-3.0, 3.0),
+            # "torque_range": (-3.0, 3.0),
         },
     )
     reset_base = EventTerm(
@@ -326,7 +328,7 @@ class BerkeleyHumanoidLiteBipedEnvCfg(LocomotionVelocityEnvCfg):
 
         # Physics settings
         # 25 Hz override
-        self.decimation = 4
+        self.decimation = 8
         self.episode_length_s = 20.0
         # simulation settings
         self.sim.dt = 0.005

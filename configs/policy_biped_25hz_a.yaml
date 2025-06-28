@@ -1,6 +1,6 @@
 
 # === Policy configurations ===
-policy_checkpoint_path: "checkpoints/policy_biped.onnx"
+policy_checkpoint_path: "checkpoints/policy_biped_25hz_a.onnx"
 
 # === Networking configurations ===
 ip_robot_addr: 127.0.0.1
@@ -11,7 +11,7 @@ ip_policy_acs_port: 10001
 # === Physics configurations ===
 control_dt: 0.004
 policy_dt: 0.04
-physics_dt: 0.001
+physics_dt: 0.0005
 cutoff_freq: 1000
 
 # === Articulation configurations ===

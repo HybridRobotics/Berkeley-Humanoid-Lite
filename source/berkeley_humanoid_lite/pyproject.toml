@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "berkeley_humanoid_lite"
-version = "2025.05.28"
+version = "2025.09.07"
 description = "Training environment for Berkeley Humanoid Lite"
 authors = [
     { name = "Berkeley Humanoid Project Developers" },

@@ -9,7 +9,7 @@
 
 Berkeley Humanoid Lite is an open-source, sub-$5,000 humanoid robot featuring modular 3D-printed gearboxes and widely available components, designed to democratize and advance humanoid robotics research.
 
-This project is built on the values of open-source, accessibility, and customization, and it's continuously evolving. We welcome your feedback, issues, and pull requests in GitHub or joining our Discord.
+This project is built on the values of open-source, accessibility, and customization, and it's continuously evolving. We welcome your feedback, issues, and pull requests on GitHub or joining our Discord.
 
 ## Overview
 
@@ -21,7 +21,7 @@ Functionalities are organized into several submodules. We arrange the directory 
 
 - `source/berkeley_humanoid_lite_assets/` contains robot descriptions (URDF, MJCF, and USD) and the script to export these description files from Onshape project.
 
-- `source/berkeley_humanoid_lite_lowlevel/` contains the lowlevel code running on the real robot. Only contents inside this folder is required to deploy to the real robot.
+- `source/berkeley_humanoid_lite_lowlevel/` contains the lowlevel code running on the real robot. Only contents inside this folder are required to deploy to the real robot.
 
 Except a few edge cases, all the commands should be invoked from the root directory of this repository. The entry points of different flows are collected in the `scripts/` directory.
 
@@ -48,7 +48,7 @@ Other assets are under [Creative Commons Attribution-ShareAlike 4.0 Internationa
 
 ## Citation
 
-If you find this code useful, we would appreciate if you would cite our paper:
+If you find this code useful, we would appreciate it if you would cite our paper:
 
 ```
 @article{chi2025demonstrating,
